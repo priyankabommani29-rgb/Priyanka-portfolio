@@ -4,7 +4,7 @@ A responsive personal portfolio website built with HTML5 and CSS3, showcasing my
 
 ## Live Demo
 
-🔗 **Live Website:** [To be added after AWS deployment]
+🔗 **Live Website:** https://d1k483u7lo5rdl.cloudfront.net
 
 ## Features
 

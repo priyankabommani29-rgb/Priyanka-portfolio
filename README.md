@@ -86,26 +86,6 @@ aws s3 sync . s3://priyanka-portfolio-2026 --delete
 
 ![CloudFront HTTPS Redirect](screenshots/04-cloudfront-https-behavior.png)
 
-### Amazon S3
-
-- [ ] Create an S3 bucket
-- [ ] Enable Static Website Hosting
-- [ ] Upload portfolio files
-- [ ] Configure bucket policy for public access (if required)
-
-Example deployment command:
-
-```bash
-aws s3 sync . s3://<your-bucket-name> --delete
-```
-
-### Amazon CloudFront
-
-- [ ] Create a CloudFront distribution
-- [ ] Select the S3 bucket as the origin
-- [ ] Enable HTTPS
-- [ ] Wait for deployment
-- [ ] Test the CloudFront URL
 
 ## Git Workflow
 

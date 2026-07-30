@@ -54,6 +54,40 @@ git clone https://github.com/priyankabommani29-rgb/Priyanka-portfolio.git
 
 ### Amazon S3
 
+- [x] Create an S3 bucket
+- [x] Enable Static Website Hosting
+- [x] Upload portfolio files
+- [x] Configure bucket policy for public read access (`s3:GetObject`)
+
+![S3 Static Website Hosting](screenshots/06-s3-static-website-hosting.png)
+
+![S3 Bucket Policy](screenshots/05-s3-bucket-policy.png)
+
+Example deployment command:
+
+```bash
+aws s3 sync . s3://priyanka-portfolio-2026 --delete
+```
+
+### Amazon CloudFront
+
+- [x] Create a CloudFront distribution
+- [x] Select the S3 website endpoint as the origin
+- [x] Enable HTTPS using **Redirect HTTP to HTTPS**
+- [x] Set Default Root Object to `index.html`
+- [x] Wait for deployment
+- [x] Test the CloudFront URL
+
+![CloudFront Distribution Overview](screenshots/01-cloudfront-distribution-overview.png)
+
+![CloudFront Distribution Status](screenshots/02-cloudfront-distributions-list.png)
+
+![CloudFront Origin Settings](screenshots/03-cloudfront-origin-settings.png)
+
+![CloudFront HTTPS Redirect](screenshots/04-cloudfront-https-behavior.png)
+
+### Amazon S3
+
 - [ ] Create an S3 bucket
 - [ ] Enable Static Website Hosting
 - [ ] Upload portfolio files

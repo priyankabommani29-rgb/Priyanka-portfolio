@@ -121,8 +121,9 @@ git push -u origin main
 ## Screenshots
 
 **Home Page**
+The deployed portfolio homepage showcasing the hero section, navigation, and call-to-action buttons.
 
-> *[Add a screenshot of the Hero section after deployment]*
+![Home Page](screenshots/home-page.png)
 
 ## Author
 

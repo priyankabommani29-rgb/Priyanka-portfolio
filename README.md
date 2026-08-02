@@ -2,6 +2,10 @@
 
 A responsive personal portfolio website built with HTML5 and CSS3, showcasing my projects, technical skills, and contact information. The portfolio is designed using a modern glassmorphism-inspired interface and is deployed as a static website on AWS.
 
+---
+
+# Task 1: Static Hosting on AWS S3 + CloudFront
+
 ## Live Demo
 
 🔗 **Live Website:** https://d1k483u7lo5rdl.cloudfront.net
@@ -86,7 +90,6 @@ aws s3 sync . s3://priyanka-portfolio-2026 --delete
 
 ![CloudFront HTTPS Redirect](screenshots/04-cloudfront-https-behavior.png)
 
-
 ## Git Workflow
 
 ```bash
@@ -104,6 +107,103 @@ git push -u origin main
 The deployed portfolio homepage showcasing the hero section, navigation, and call-to-action buttons.
 
 ![Home Page](screenshots/home-page.png)
+
+---
+
+# Task 2: Containerization Using Docker + Cloud VM Deployment
+
+This task extends the portfolio from Task 1 by packaging it into a Docker container running Nginx, then deploying that container onto an AWS EC2 virtual machine — accessible via a public IP address.
+
+## Live Deployment (Task 2)
+
+🔗 **Public IP:** http://13.222.173.149
+
+## Additional Tech Stack
+
+- Docker
+- Nginx (via `nginx:alpine` base image)
+- AWS EC2 (Ubuntu 26.04 LTS, t3.micro)
+
+## Dockerfile
+
+```dockerfile
+FROM nginx:alpine
+COPY . /usr/share/nginx/html
+EXPOSE 80
+```
+
+**Why these three instructions:**
+- `FROM nginx:alpine` — uses a minimal, pre-built web server image (~30MB total) instead of building a server from scratch
+- `COPY . /usr/share/nginx/html` — copies the portfolio files into Nginx's default web root, so they're served automatically
+- `EXPOSE 80` — documents that the container serves traffic on port 80 (the standard HTTP port)
+
+## Local Docker Steps
+
+```bash
+# Build the image
+docker build -t portfolio-website .
+
+# Run the container locally (mapped to host port 8081 to avoid conflicts)
+docker run -d -p 8081:80 portfolio-website
+```
+
+Visit `http://localhost:8081` to test locally before deploying.
+
+## Cloud VM Deployment Steps
+
+### 1. Launch an EC2 instance
+- AMI: Ubuntu 26.04 LTS (Free tier eligible)
+- Instance type: t3.micro (Free tier eligible)
+- Security Group: allow SSH (22), HTTP (80), HTTPS (443) — least-privilege, only what's needed to manage and serve the site
+
+### 2. Connect via SSH
+```bash
+ssh -i portfolio-key.pem ubuntu@13.222.173.149
+```
+
+### 3. Install Docker on the VM
+```bash
+sudo apt update
+sudo apt install docker.io -y
+sudo systemctl start docker
+sudo systemctl enable docker
+```
+
+### 4. Allow Docker without sudo (optional but recommended)
+```bash
+sudo usermod -aG docker ubuntu
+```
+Log out and back in for this to take effect — avoids needing `sudo` before every Docker command.
+
+### 5. Clone the repository onto the VM
+```bash
+git clone https://github.com/priyankabommani29-rgb/Priyanka-portfolio.git
+cd Priyanka-portfolio
+```
+
+### 6. Build and run the container on the VM
+```bash
+docker build -t portfolio-website .
+docker run -d -p 80:80 portfolio-website
+```
+
+### 7. Verify
+
+```bash
+docker ps
+```
+
+![Docker Container Running](screenshots/docker-ps.png)
+
+Then visit the public IP directly in a browser — no port number needed, since the container is mapped to port 80: http://13.222.173.149
+
+## Issues Faced & Solutions
+
+- **Local port 8080 conflict:** host port 8080 was already in use by another process; resolved by mapping to 8081 instead (`-p 8081:80`)
+- **Docker permission denied on VM:** the `ubuntu` user wasn't in the `docker` group by default; fixed with `sudo usermod -aG docker ubuntu` followed by re-login
+- **t2.micro not free-tier eligible on this account:** used `t3.micro` instead, which is functionally equivalent for this workload and confirmed free-tier eligible
+
+---
 
 ## Author
 

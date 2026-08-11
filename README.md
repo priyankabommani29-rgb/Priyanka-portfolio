@@ -205,6 +205,91 @@ Then visit the public IP directly in a browser — no port number needed, since 
 
 ---
 
+---
+
+# Task 3: CI/CD Automation for Dockerized Applications Using GitHub Actions
+
+This task automates the Docker build-and-push process from Task 2 using GitHub Actions — every push to `main` automatically builds a fresh Docker image and publishes it to Docker Hub, removing manual build steps and reducing human error.
+
+## Docker Hub Image
+
+🔗 **Image:** https://hub.docker.com/r/priyankab29/portfolio-website
+
+```bash
+docker pull priyankab29/portfolio-website:latest
+```
+
+## Additional Tech Stack
+
+- GitHub Actions
+- Docker Hub
+- YAML
+
+## CI/CD Concept
+
+- **CI (Continuous Integration):** automatically building the Docker image on every push, catching build issues immediately rather than manually
+- **Scope of this task:** CI + image delivery only — the image is built and published automatically, but deployment to the EC2 VM (from Task 2) remains a manual `docker pull` + `docker run`, which is the natural next step for a future CD task
+
+## Workflow File
+
+`.github/workflows/docker-ci.yml`
+
+```yaml
+name: Docker CI Pipeline
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  docker-build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build Docker image
+        run: docker build -t ${{ secrets.DOCKER_USERNAME }}/portfolio-website:latest .
+
+      - name: Push Docker image
+        run: docker push ${{ secrets.DOCKER_USERNAME }}/portfolio-website:latest
+```
+
+**Why each step exists:**
+- `Checkout code` — the runner starts as an empty VM; this pulls the repo's files onto it
+- `Login to Docker Hub` — authenticates using GitHub Secrets (`DOCKER_USERNAME`, `DOCKER_PASSWORD`), never hardcoded credentials
+- `Build Docker image` — same `docker build` command from Task 2, now run automatically
+- `Push Docker image` — publishes the built image to Docker Hub, making it centrally available for deployment anywhere
+
+## Secrets Configuration
+
+Configured under **GitHub Repo → Settings → Secrets and variables → Actions**:
+- `DOCKER_USERNAME` — Docker Hub username
+- `DOCKER_PASSWORD` — Docker Hub **Access Token** (not the account password — tokens are scoped and revocable independently)
+
+## Verifying the Pipeline
+
+1. Push any change to `main`
+2. Go to the repo's **Actions** tab to watch the workflow run
+3. Confirm all four steps show green checkmarks
+4. Confirm the new image appears on Docker Hub with an updated "last pushed" timestamp
+
+![GitHub Actions Successful Run](screenshots/github-actions-success.png)
+
+## Issues Faced & Solutions
+
+- **Secret name mismatch:** initial YAML referenced `DOCKERHUB_USERNAME`/`DOCKERHUB_TOKEN`, but the actual GitHub Secrets were named `DOCKER_USERNAME`/`DOCKER_PASSWORD` — mismatched names fail silently (resolve to empty values) rather than throwing a clear error. Fixed by aligning the YAML references exactly with the secret names.
+- **Incorrect Docker Hub authentication:** initial token/credentials were rejected; resolved by regenerating a fresh Docker Hub Access Token and re-entering both secrets carefully.
+- **Image name drift:** an intermediate edit accidentally hardcoded a different image name (`docker-ci-pipeline`) instead of `portfolio-website`; corrected to keep consistency with the project and Task 2's naming.
+
 ## Author
 
 **Priyanka B**

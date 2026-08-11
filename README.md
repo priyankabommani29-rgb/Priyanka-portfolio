@@ -2,6 +2,8 @@
 
 A responsive personal portfolio website built with HTML5 and CSS3, showcasing my projects, technical skills, and contact information. The portfolio is designed using a modern glassmorphism-inspired interface and is deployed as a static website on AWS.
 
+![CI Status](https://github.com/priyankabommani29-rgb/Priyanka-portfolio/actions/workflows/docker-ci.yml/badge.svg)
+
 ---
 
 # Task 1: Static Hosting on AWS S3 + CloudFront

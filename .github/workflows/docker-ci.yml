@@ -20,7 +20,7 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Build Docker image
-        run: docker build -t priyankab29/docker-ci-pipeline:latest .
+        run: docker build -t ${{ secrets.DOCKER_USERNAME }}/portfolio-website:latest .
 
       - name: Push Docker image
-        run: docker push priyankab29/docker-ci-pipeline:latest
+        run: docker push ${{ secrets.DOCKER_USERNAME }}/portfolio-website:latest

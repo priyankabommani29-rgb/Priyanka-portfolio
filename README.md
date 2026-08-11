@@ -220,6 +220,13 @@ This task automates the Docker build-and-push process from Task 2 using GitHub A
 ```bash
 docker pull priyankab29/portfolio-website:latest
 ```
+## Versioned Tags
+
+Every push builds and pushes **two tags**: `latest` (always the newest build) and the Git commit SHA (e.g., `6e59f5c...`), so any previous build remains individually retrievable even after `latest` is overwritten by a newer push.
+
+```bash
+docker pull priyankab29/portfolio-website:<commit-sha>
+```
 
 ## Additional Tech Stack
 
@@ -259,10 +266,14 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Build Docker image
-        run: docker build -t ${{ secrets.DOCKER_USERNAME }}/portfolio-website:latest .
+        run: |
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/portfolio-website:latest .
+          docker tag ${{ secrets.DOCKER_USERNAME }}/portfolio-website:latest ${{ secrets.DOCKER_USERNAME }}/portfolio-website:${{ github.sha }}
 
       - name: Push Docker image
-        run: docker push ${{ secrets.DOCKER_USERNAME }}/portfolio-website:latest
+        run: |
+          docker push ${{ secrets.DOCKER_USERNAME }}/portfolio-website:latest
+          docker push ${{ secrets.DOCKER_USERNAME }}/portfolio-website:${{ github.sha }}
 ```
 
 **Why each step exists:**

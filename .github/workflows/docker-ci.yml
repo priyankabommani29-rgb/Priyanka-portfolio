@@ -28,3 +28,20 @@ jobs:
         run: |
           docker push ${{ secrets.DOCKER_USERNAME }}/portfolio-website:latest
           docker push ${{ secrets.DOCKER_USERNAME }}/portfolio-website:${{ github.sha }}
+
+  deploy:
+    needs: docker-build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy to VM
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.VM_SSH_KEY }}
+          script: |
+            docker pull ${{ secrets.DOCKER_USERNAME }}/portfolio-website:latest
+            docker stop portfolio-website || true
+            docker rm portfolio-website || true
+            docker run -d --name portfolio-website --restart unless-stopped -p 8080:80 ${{ secrets.DOCKER_USERNAME }}/portfolio-website:latest

@@ -303,6 +303,130 @@ Configured under **GitHub Repo → Settings → Secrets and variables → Action
 - **Incorrect Docker Hub authentication:** initial token/credentials were rejected; resolved by regenerating a fresh Docker Hub Access Token and re-entering both secrets carefully.
 - **Image name drift:** an intermediate edit accidentally hardcoded a different image name (`docker-ci-pipeline`) instead of `portfolio-website`; corrected to keep consistency with the project and Task 2's naming.
 
+---
+
+# Task 4: Automated Deployment of Dockerized Application on Cloud VM with Nginx Reverse Proxy
+
+This task closes the full DevOps automation loop: every push to `main` now automatically builds a Docker image, publishes it to Docker Hub, **and deploys it live to the EC2 VM** — with Nginx acting as a reverse proxy in front of the container. No manual SSH or Docker commands are required for a deployment anymore.
+
+## Live Application
+
+🔗 **Live Site:** http://13.222.173.149
+
+## Additional Tech Stack
+
+- Nginx (VM-level reverse proxy, separate from the container's internal Nginx)
+- SSH key-based authentication (dedicated deploy key)
+- `appleboy/ssh-action` (GitHub Action for remote deployment)
+
+
+**Why the container moved from port 80 (Task 2) to port 8080:** the VM's own Nginx installation now claims port 80 to act as a reverse proxy — only one process can bind to a given port, so the Docker container runs internally on 8080 instead, with Nginx forwarding public traffic to it.
+
+## Why a Reverse Proxy
+
+Exposing a container directly on port 80 (as in Task 2) works for a simple demo, but isn't how production systems are typically architected:
+- **Multiple apps, one server:** Nginx can route different paths/domains to different containers, which isn't possible if a container claims port 80 directly
+- **Centralized control:** SSL, security headers, and routing logic live in one place (Nginx) rather than being duplicated inside every container
+- **Safer deployments:** Nginx can keep serving while a new container version starts up on a different internal port
+
+## Nginx Reverse Proxy Configuration
+
+`/etc/nginx/sites-available/docker-app` on the VM:
+
+```nginx
+server {
+    listen 80;
+    listen [::]:80;
+
+    server_name _;
+
+    location / {
+        proxy_pass http://127.0.0.1:8080;
+
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+**Setup commands:**
+```bash
+sudo apt install nginx -y
+sudo systemctl start nginx
+sudo systemctl enable nginx
+
+sudo nano /etc/nginx/sites-available/docker-app
+# (paste config above)
+
+sudo ln -s /etc/nginx/sites-available/docker-app /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
+## SSH Key Setup for CI/CD
+
+A **dedicated SSH key pair** was generated specifically for automated deployment — separate from the personal AWS-issued key (`portfolio-key.pem`) used for manual access. This limits exposure: if the automation key were ever compromised, it can be revoked independently without affecting manual account access.
+
+```bash
+ssh-keygen -t rsa -b 4096 -f deploy_key
+# public key appended to VM's ~/.ssh/authorized_keys
+# private key stored as GitHub Secret: VM_SSH_KEY
+```
+
+## GitHub Secrets Used
+
+- `DOCKER_USERNAME` / `DOCKER_PASSWORD` — from Task 3, reused for image pull authentication
+- `VM_HOST` — EC2 public IP
+- `VM_USER` — `ubuntu`
+- `VM_SSH_KEY` — private half of the dedicated deploy key
+
+## CD Pipeline (Deploy Job)
+
+Added to `.github/workflows/docker-ci.yml`, running after `docker-build` completes successfully:
+
+```yaml
+  deploy:
+    needs: docker-build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy to VM
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.VM_SSH_KEY }}
+          script: |
+            docker pull ${{ secrets.DOCKER_USERNAME }}/portfolio-website:latest
+            docker stop portfolio-website || true
+            docker rm portfolio-website || true
+            docker run -d --name portfolio-website --restart unless-stopped -p 8080:80 ${{ secrets.DOCKER_USERNAME }}/portfolio-website:latest
+```
+
+**Why `needs: docker-build`:** ensures the deploy job only runs after a successful build+push — prevents deploying a broken or nonexistent image.
+
+**Why `|| true` on stop/rm but not pull/run:** stop/remove can legitimately "fail" on first deployment (no existing container to remove) — that's expected and shouldn't halt the pipeline. Pull and run, however, are the actual deployment steps — if either fails, the pipeline should fail loudly rather than silently reporting success while the site is actually broken.
+
+**Why `--restart unless-stopped`:** ensures the container automatically restarts if the VM ever reboots, without requiring manual intervention.
+
+## Verifying the Pipeline
+
+```bash
+docker ps
+```
+Confirms the container's `CREATED` timestamp matches the latest deployment, running on port 8080.
+
+![Successful CI/CD Run](screenshots/cicd-deploy-success.png)
+
+## Issues Faced & Solutions
+
+- **SSH private key not recognized (`ssh: no key found`):** copying the private key via terminal `cat` collapsed multi-line formatting into a single line. Fixed by opening the key file in a plain text editor (Notepad) and copying it directly, preserving line breaks, before pasting into the GitHub Secret.
+- **Port conflict between VM-level Nginx and the existing Task 2 container:** both needed port 80. Resolved by stopping/removing the old container and reassigning it to port 8080, with Nginx handling port 80 as a reverse proxy.
+- **Container survivability after VM reboot:** the original container had no restart policy. Added `--restart unless-stopped`, both manually and permanently within the automated deploy script, so future reboots don't require manual redeployment.
+
 ## Author
 
 **Priyanka B**
